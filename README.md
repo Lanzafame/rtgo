@@ -28,4 +28,4 @@ This package comes with a very simple command-line tool with with only a few com
 
 ## DOM
 - **data-rt-view=""** - Assign this attribute to the element which will act as the container for requested views. By default, this is already specified in base.html.
-- **data-rt-href="{path}"** - All elements with this attribute will have on onclick listener attached to them. When clicked,the corresponding view will be requested.
+- **data-rt-href="{path}"** - All elements with this attribute will have on onclick listener attached to them. When clicked, the corresponding view will be requested.
