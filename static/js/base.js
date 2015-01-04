@@ -34,7 +34,7 @@ var Base = (function Base(global) {
     };
 
 /**
- * rtgo.showLogin
+ * rtgo.hideForms
  * Hide all forms.
  */
     rtgo.hideForms = function hideLogin() {
