@@ -25,3 +25,7 @@ This package comes with a very simple command-line tool with with only a few com
 - **del controller <name>** - delete a controller with the specified name; this deletes a &lt;script&gt; tag to base.html and a file in /static/js/controllers with the name specified.
 - **add view <name>** - add a view with the specified name; this adds a file to /static/views with the specified name.
 - **del view <name>** - delete a view with the specefied name; this deletes a file from /static/views with the specified name.
+
+## DOM
+*data-rt-view=""* - Assign this attribute to the element which will act as the container for requested views. By default, this is already specified in base.html.
+*data-rt-href="{path}"* - All elements with this attribute will have on onclick listener attached to them. When clicked,the corresponding view will be requested.
