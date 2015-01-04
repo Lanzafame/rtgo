@@ -1,0 +1,50 @@
+{
+    "database": {
+        "riak": {
+            "host": "127.0.0.1",
+            "port": "8087",
+            "buckets": "test"
+        },
+        "postgres": {
+            "dbname": "test",
+            "host": "/var/run/postgresql",
+            "user": "test",
+            "password": "test",
+            "sslmode": "disable",
+            "fallback_application_name": "",
+            "connect_timeout": "90",
+            "sslcert": "",
+            "sslkey": "",
+            "sslrootcert": "",
+            "tables": "test"
+        },
+        "mysql": {
+            "host": "unix(/var/run/mysqld/mysqld.sock)",
+            "user": "test",
+            "password": "test",
+            "dbname": "test",
+            "allowAllFiles": "false",
+            "allowOldPasswords": "false",
+            "charset": "utf8",
+            "collation": "utf8_general_ci",
+            "clientFoundRows": "false",
+            "loc": "UTC",
+            "parseTime": "false",
+            "strict": "false",
+            "timeout": "1m30s",
+            "tls": "false",
+            "tables": "test"
+        },
+        "sqlite3": {
+            "file": "./test.db",
+            "tables": "test"
+        }
+    },
+    "routes": {
+        "/": {
+            "table": "index",
+            "template": "index",
+            "controller": "index"
+        }
+    }
+}
