@@ -165,7 +165,7 @@
     WSRooms.prototype.close = WSRooms.prototype.leave;
 
 /**
- * WSRooms.close
+ * WSRooms.onclose
  * Called when an instance of WSRooms is closed.
  */
     WSRooms.prototype.onclose = function onclose() {

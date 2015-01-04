@@ -5,6 +5,10 @@ var Base = (function Base(global) {
         loginForm = clean('.form[name="login"]'),
         registerForm = clean('.form[name="register"]');
 
+/**
+ * rtgo.showRegister
+ * Show the registration form.
+ */
     rtgo.showRegister = function showRegister() {
         loginForm.addClass('hide');
         registerForm.remClass('hide');
@@ -15,6 +19,10 @@ var Base = (function Base(global) {
         }
     };
 
+/**
+ * rtgo.showLogin
+ * Show the login form.
+ */
     rtgo.showLogin = function showLogin() {
         registerForm.addClass('hide');
         loginForm.remClass('hide');
@@ -25,6 +33,10 @@ var Base = (function Base(global) {
         }
     };
 
+/**
+ * rtgo.showLogin
+ * Hide all forms.
+ */
     rtgo.hideForms = function hideLogin() {
         clean('.form-container').togClass('fade-down', 'fade-up');
     };

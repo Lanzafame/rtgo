@@ -3,6 +3,11 @@ var Login = (function Login(global) {
 
     var submit = clean('.form-button');
 
+/**
+ * sendForm
+ * Send the form data to the server via an XHR.
+ * @param {Object} values
+ */
     function sendForm(values) {
         var fd = new FormData();
 
@@ -27,6 +32,13 @@ var Login = (function Login(global) {
         });
     }
 
+/**
+ * checkFields
+ * Check the form fields upon submitting the form.
+ * If any of the validations fail, add a pulsing red
+ * border animation to the input field.
+ * @param {Event Object} e
+ */
     function checkFields(e) {
         var wordregx = /^\w+$/,
             emailregx = /^[\w.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}$/,
@@ -58,12 +70,22 @@ var Login = (function Login(global) {
     }
     submit.on('click', checkFields, false);
 
-
+/**
+ * addGlow
+ * Add a light-blue glow to the input field icons when in focus.
+ * @param {Event Object} e
+ */
     function addGlow(e) {
         var icon = e.target.parentNode.querySelector('.form-input-icon');
 
         icon.classList.add('glow');
     }
+
+/**
+ * removeGlow
+ * Remove the light-blue glow from the input field icons when out of focus.
+ * @param {Event Object} e
+ */
     function removeGlow(e) {
         var icon = e.target.parentNode.querySelector('.form-input-icon');
 
@@ -71,6 +93,5 @@ var Login = (function Login(global) {
     }
     clean('.form-input').on('focus', addGlow, false);
     clean('.form-input').on('blur', removeGlow, false);
-    
 
 }(this));
