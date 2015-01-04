@@ -14,44 +14,46 @@ type RTRoom struct {
 	send    chan []byte
 }
 
+var RoomManager = make(map[string]*RTRoom)
+
 func (r *RTRoom) Start() {
 	for {
 		select {
-		case conn := <-r.join:
+		case c := <-r.join:
 			payload := &Message{
 				Room:    r.name,
 				Event:   "join",
-				Payload: conn.id,
+				Payload: c.id,
 			}
 			data, err := json.Marshal(payload)
 			if err != nil {
 				log.Println(err)
 				break
 			}
-			conn.send <- data
-			r.members[conn] = true
-		case conn := <-r.leave:
-			if _, ok := r.members[conn]; ok {
+			c.send <- data
+			r.members[c] = true
+		case c := <-r.leave:
+			if _, ok := r.members[c]; ok {
 				payload := &Message{
 					Room:    r.name,
 					Event:   "leave",
-					Payload: conn.id,
+					Payload: c.id,
 				}
 				data, err := json.Marshal(payload)
 				if err != nil {
 					log.Println(err)
 					break
 				}
-				conn.send <- data
-				delete(r.members, conn)
+				c.send <- data
+				delete(r.members, c)
 			}
 		case data := <-r.send:
-			for conn := range r.members {
+			for c := range r.members {
 				select {
-				case conn.send <- data:
+				case c.send <- data:
 				default:
-					close(conn.send)
-					delete(r.members, conn)
+					close(c.send)
+					delete(r.members, c)
 				}
 			}
 		case <-r.stop:
@@ -64,12 +66,12 @@ func (r *RTRoom) Stop() {
 	r.stop <- true
 }
 
-func (r *RTRoom) Join(conn *RTConn) {
-	r.join <- conn
+func (r *RTRoom) Join(c *RTConn) {
+	r.join <- c
 }
 
-func (r *RTRoom) Leave(conn *RTConn) {
-	r.leave <- conn
+func (r *RTRoom) Leave(c *RTConn) {
+	r.leave <- c
 }
 
 func (r *RTRoom) Emit(payload *Message) {

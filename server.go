@@ -14,7 +14,7 @@ import (
 	"strings"
 )
 
-// read a secure cookie
+// Read a secure cookie and return its value.
 func ReadCookieHandler(w http.ResponseWriter, r *http.Request, cookname string) map[string]string {
 	cookie, err := r.Cookie(cookname)
 	if err != nil {
@@ -27,7 +27,7 @@ func ReadCookieHandler(w http.ResponseWriter, r *http.Request, cookname string) 
 	return cookvalue
 }
 
-// set a secure cookie
+// Set a secure cookie with a cookie name and value.
 func SetCookieHandler(w http.ResponseWriter, r *http.Request, cookname string, cookvalue map[string]string) {
 	encoded, err := config.Scook.Encode(cookname, cookvalue)
 	if err != nil {
@@ -42,30 +42,32 @@ func SetCookieHandler(w http.ResponseWriter, r *http.Request, cookname string, c
 	return
 }
 
-// handle requests for '/register'
+// RegisterHandler handles user registration and only handles POST requests.
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Invalid request method.", 405)
 		return
 	}
-	err := r.ParseMultipartForm(1024 * 1024)
-	if err != nil {
+	// Parse the incoming form data.
+	if err := r.ParseMultipartForm(1024 * 1024); err != nil {
 		w.WriteHeader(500)
 		return
 	}
 	username := r.FormValue("username")
 	email := r.FormValue("email")
 	password := r.FormValue("password")
+	// Loop through the list of database connections held in DBManager.
 	for _, db := range DBManager {
-		_, err = db.GetObj("users", username)
-		if err == nil {
+		// If the specified username already exists, move on to the next database.
+		if _, err := db.GetObj("users", username); err == nil {
 			continue
 		}
 		randombytes := make([]byte, 16)
-		_, err = rand.Read(randombytes)
-		if err != nil {
+		if _, err := rand.Read(randombytes); err != nil {
 			continue
 		}
+		// Generate a SHA256 hash for the parsed user credentials.
+		// SHA256Sum(username + email + password + salt)
 		salt := fmt.Sprintf("%x", sha1.Sum(randombytes))
 		hashstring := []byte(fmt.Sprintf("%s%s%s%s", username, email, password, salt))
 		passhash := fmt.Sprintf("%x", sha256.Sum256(hashstring))
@@ -79,10 +81,13 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 				"bitmask":   0,
 			},
 		}
+		// Insert the new user credentials into the database.
 		if err := db.InsertObj("users", username, obj); err != nil {
 			continue
 		}
-		SetCookieHandler(w, r, "rtgo", map[string]string{
+		// Set a secure cookie with the cookiename specified in config.json if the
+		// new user credentials were successfully entered into the database.
+		SetCookieHandler(w, r, config.Cookiename, map[string]string{
 			"username":  username,
 			"privilege": "user",
 		})
@@ -92,14 +97,14 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(500)
 }
 
-// handle requests for '/login'
+// LoginHandler handles user logins and only handles POST requests.
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Invalid request method.", 405)
 		return
 	}
-	err := r.ParseMultipartForm(1024 * 1024)
-	if err != nil {
+	// Parse the received form data.
+	if err := r.ParseMultipartForm(1024 * 1024); err != nil {
 		w.WriteHeader(500)
 		return
 	}
@@ -114,7 +119,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		role := result["role"].(map[string]interface{})
 		passhash := sha256.Sum256([]byte(fmt.Sprintf("%s%s%s%s", username, result["email"], password, result["salt"])))
 		if fmt.Sprintf("%x", passhash) == result["passhash"].(string) {
-			SetCookieHandler(w, r, "rtgo", map[string]string{
+			SetCookieHandler(w, r, config.Cookiename, map[string]string{
 				"username":  username,
 				"privilege": role["privilege"].(string),
 			})
@@ -125,7 +130,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(500)
 }
 
-// base handler
+// BaseHandler server the base.html file and handles the initial request
 func BaseHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", 405)
@@ -135,16 +140,17 @@ func BaseHandler(w http.ResponseWriter, r *http.Request) {
 		"username":  "guest",
 		"privilege": "user",
 	}
-	SetCookieHandler(w, r, "rtgo", cookvalue)
+	SetCookieHandler(w, r, config.Cookiename, cookvalue)
 	config.Templates.ExecuteTemplate(w, "base", nil)
 }
 
-// static file handler
+// StaticHandler serves the static content
 func StaticHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, r.URL.Path[1:])
 }
 
-// find a route
+// FindRoute returns the variables specified in the config.json
+// file that match the path requested.
 func FindRoute(path string) map[string]string {
 	route := make(map[string]string)
 	if _, ok := config.Routes[path]; ok {
@@ -175,7 +181,7 @@ func FindRoute(path string) map[string]string {
 	return route
 }
 
-// send a view
+// SendView sends the view associated with the requested path.
 func SendView(conn *RTConn, path string) {
 	var doc bytes.Buffer
 	var err error
@@ -185,6 +191,8 @@ func SendView(conn *RTConn, path string) {
 		return
 	}
 	collection := make([]interface{}, 0)
+	// If a table is specified in the config.json file under the matched
+	// route, retrieve the values in the table.
 	if _, ok := route["table"]; ok {
 		for _, db := range DBManager {
 			collection, err = db.GetAllObjs(route["table"])
@@ -194,6 +202,8 @@ func SendView(conn *RTConn, path string) {
 			break
 		}
 	}
+	// Render the retrieved database values in the template specified in the
+	// config.json file for the requested route.
 	config.Templates.ExecuteTemplate(&doc, route["template"], collection)
 	response := map[string]interface{}{
 		"room":  "root",
@@ -211,8 +221,8 @@ func SendView(conn *RTConn, path string) {
 	conn.send <- data
 }
 
-func InitServer() {
-	InitDatabases()
+// InitWebserver starts the webserver.
+func InitWebserver() {
 	http.HandleFunc("/", BaseHandler)
 	http.HandleFunc("/login", LoginHandler)
 	http.HandleFunc("/register", RegisterHandler)

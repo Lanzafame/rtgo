@@ -22,7 +22,9 @@ type RTDatabase struct {
 	connection *sql.DB
 }
 
-// retrieve all objects/data stored within a specified database table
+var DBManager = make(map[string]*RTDatabase)
+
+// GetAllObjs returns an array of all objects in a database table.
 func (db *RTDatabase) GetAllObjs(table string) ([]interface{}, error) {
 	data := make([]interface{}, 0)
 	if db.name == "riak" {
@@ -81,7 +83,7 @@ func (db *RTDatabase) GetAllObjs(table string) ([]interface{}, error) {
 	return data, nil
 }
 
-// get an object from a table
+// GetObj retrieves an object from a database table.
 func (db *RTDatabase) GetObj(table string, key string) (interface{}, error) {
 	var data interface{}
 	if db.name == "riak" {
@@ -116,7 +118,7 @@ func (db *RTDatabase) GetObj(table string, key string) (interface{}, error) {
 	return data, nil
 }
 
-// delete an object from a table
+// DeleteObj deletes an object from a database table.
 func (db *RTDatabase) DeleteObj(table string, key string) error {
 	if db.name == "riak" {
 		if _, exists := db.buckets[table]; !exists {
@@ -139,7 +141,7 @@ func (db *RTDatabase) DeleteObj(table string, key string) error {
 	return nil
 }
 
-// insert an object into a table
+// InsertObj inserts an object into a database table.
 func (db *RTDatabase) InsertObj(table string, key string, data interface{}) error {
 	blob, err := json.Marshal(&data)
 	if err != nil {
@@ -169,6 +171,8 @@ func (db *RTDatabase) InsertObj(table string, key string, data interface{}) erro
 	return nil
 }
 
+// Start starts the database and initializes the database tables/buckets.
+// If a users table is not specified in the config.json file, create it anyways.
 func (db *RTDatabase) Start() {
 	usersTableExists := false
 	if db.name == "riak" {
@@ -213,6 +217,7 @@ func (db *RTDatabase) Start() {
 	}
 }
 
+// NewDatabase returns a new instance of RTDatabase
 func NewDatabase(name string, parameters map[string]string) *RTDatabase {
 	var dsn string
 	var create string
@@ -230,21 +235,15 @@ func NewDatabase(name string, parameters map[string]string) *RTDatabase {
 		dsn = fmt.Sprintf("%s", parameters["file"])
 		create = "CREATE TABLE IF NOT EXISTS %s (hash VARCHAR(255) NOT NULL UNIQUE PRIMARY KEY, data BLOB)"
 	}
-	database := &RTDatabase{
+	db := &RTDatabase{
 		name:       name,
 		buckets:    make(map[string]*riak.Bucket),
 		parameters: parameters,
 		dsn:        dsn,
 		create:     create,
 	}
-	DBManager[name] = database
-	return database
-}
-
-// start the database
-func InitDatabases() {
-	for dbase, parameters := range config.Database {
-		database := NewDatabase(dbase, parameters)
-		database.Start()
-	}
+	// Add the new instance of RTDatabase to the DBManager
+	DBManager[name] = db
+	db.Start()
+	return db
 }
