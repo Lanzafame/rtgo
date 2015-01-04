@@ -5,7 +5,7 @@ A Go real-time web framework that all starts with a config.json file.  Right now
 
 
 ## config.json
-There is an example config.json file (config.json.example) in the repo will clearly depict the possible fields.  I have specified them below as well:
+There is an example config.json file (config.json.example) in the repo which clearly depicts the possible fields.  I have specified them below as well:
 - **cookiename** - the name of the cookie to be used
 - **database** - an object specifying the databases to use
   - **postgres** - http://godoc.org/github.com/lib/pq
