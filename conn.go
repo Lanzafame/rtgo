@@ -1,6 +1,7 @@
-package main
+package rtgo
 
 import (
+	"bytes"
 	"code.google.com/p/go-uuid/uuid"
 	"encoding/json"
 	"errors"
@@ -34,8 +35,8 @@ type RTConn struct {
 
 var ConnManager = make(map[string]*RTConn)
 
-// handleData handles incoming JSON data received by a WebSocket connection, or an RTConn instance.
-func (c *RTConn) handleData(data *Message) error {
+// HandleData handles incoming JSON data received by a WebSocket connection, or an RTConn instance.
+func HandleData(c *RTConn, data *Message) error {
 	switch data.Event {
 	default:
 		c.Emit(data)
@@ -44,11 +45,11 @@ func (c *RTConn) handleData(data *Message) error {
 	case "leave":
 		c.Leave(data.Room)
 	case "request":
-		SendView(c, data.Payload)
+		c.SendView(data.Payload)
 	case "getObj":
-		//	if c.privilege != "admin" {
-		//		return
-		//	}
+		if c.privilege != "admin" {
+			return nil
+		}
 		payload := &DBMessage{}
 		if err := json.Unmarshal([]byte(data.Payload), payload); err != nil {
 			return err
@@ -82,9 +83,9 @@ func (c *RTConn) handleData(data *Message) error {
 			return err
 		}
 	case "deleteObj":
-		//	if c.privilege != "admin" {
-		//		return
-		//	}
+		if c.privilege != "admin" {
+			return nil
+		}
 		payload := &DBMessage{}
 		err := json.Unmarshal([]byte(data.Payload), payload)
 		if err != nil {
@@ -122,7 +123,7 @@ func (c *RTConn) readPump() {
 			}
 			break
 		}
-		if err := c.handleData(data); err != nil {
+		if err := HandleData(c, data); err != nil {
 			log.Println(err)
 		}
 	}
@@ -157,6 +158,47 @@ func (c *RTConn) writePump() {
 			}
 		}
 	}
+}
+
+// SendView sends the view associated with the requested path.
+func (c *RTConn) SendView(path string) {
+	var doc bytes.Buffer
+	var err error
+	route := FindRoute(path)
+	log.Println(route)
+	if _, ok := route["template"]; !ok {
+		log.Println("No template for the specified path: ", path)
+		return
+	}
+	collection := make([]interface{}, 0)
+	// If a table is specified in the config.json file under the matched
+	// route, retrieve the values in the table.
+	if _, ok := route["table"]; ok {
+		for _, db := range DBManager {
+			collection, err = db.GetAllObjs(route["table"])
+			if err != nil {
+				continue
+			}
+			break
+		}
+	}
+	// Render the retrieved database values in the template specified in the
+	// config.json file for the requested route.
+	config.Templates.ExecuteTemplate(&doc, route["template"], collection)
+	response := map[string]interface{}{
+		"room":  "root",
+		"event": "response",
+		"payload": map[string]string{
+			"template":   doc.String(),
+			"controller": route["controller"],
+		},
+	}
+	data, err := json.Marshal(&response)
+	if err != nil {
+		log.Println("error encoding json: ", err)
+		return
+	}
+	c.send <- data
 }
 
 // Join will cause a connection to join a specified room.

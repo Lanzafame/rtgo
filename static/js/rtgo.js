@@ -62,7 +62,7 @@
 
         function setup(path) {
             return function (e) {
-                global.location.hash = curhash.replace(/(\#)/g, '').replace(/(\/\/)/g, '/');
+                global.location.hash = path.replace(/(\#)/g, '').replace(/(\/\/)/g, '/');
             };
         }
 

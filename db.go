@@ -1,4 +1,4 @@
-package main
+package rtgo
 
 import (
 	"database/sql"

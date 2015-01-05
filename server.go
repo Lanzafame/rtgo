@@ -1,11 +1,9 @@
-package main
+package rtgo
 
 import (
-	"bytes"
 	"crypto/rand"
 	"crypto/sha1"
 	"crypto/sha256"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -157,6 +155,9 @@ func FindRoute(path string) map[string]string {
 		route = config.Routes[path]
 	} else {
 		for key, _ := range config.Routes {
+			if !strings.HasPrefix(key, "^") {
+				continue
+			}
 			reg, err := regexp.Compile(key)
 			if err != nil {
 				continue
@@ -181,46 +182,6 @@ func FindRoute(path string) map[string]string {
 	return route
 }
 
-// SendView sends the view associated with the requested path.
-func SendView(conn *RTConn, path string) {
-	var doc bytes.Buffer
-	var err error
-	route := FindRoute(path)
-	if _, ok := route["template"]; !ok {
-		log.Println("No template for the specified path: ", path)
-		return
-	}
-	collection := make([]interface{}, 0)
-	// If a table is specified in the config.json file under the matched
-	// route, retrieve the values in the table.
-	if _, ok := route["table"]; ok {
-		for _, db := range DBManager {
-			collection, err = db.GetAllObjs(route["table"])
-			if err != nil {
-				continue
-			}
-			break
-		}
-	}
-	// Render the retrieved database values in the template specified in the
-	// config.json file for the requested route.
-	config.Templates.ExecuteTemplate(&doc, route["template"], collection)
-	response := map[string]interface{}{
-		"room":  "root",
-		"event": "response",
-		"payload": map[string]string{
-			"template":   doc.String(),
-			"controller": route["controller"],
-		},
-	}
-	data, err := json.Marshal(&response)
-	if err != nil {
-		log.Println("error encoding json: ", err)
-		return
-	}
-	conn.send <- data
-}
-
 // InitWebserver starts the webserver.
 func InitWebserver() {
 	http.HandleFunc("/", BaseHandler)
@@ -228,5 +189,5 @@ func InitWebserver() {
 	http.HandleFunc("/register", RegisterHandler)
 	http.HandleFunc("/ws", SocketHandler)
 	http.HandleFunc("/static/", StaticHandler)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", config.Port), nil))
 }

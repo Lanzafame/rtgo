@@ -1,4 +1,4 @@
-package main
+package rtgo
 
 type Message struct {
 	Room    string `json:"room"`
