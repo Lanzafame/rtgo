@@ -9,6 +9,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"regexp"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -36,7 +39,7 @@ type RTConn struct {
 var ConnManager = make(map[string]*RTConn)
 
 // HandleData handles incoming JSON data received by a WebSocket connection, or an RTConn instance.
-func handleData(c *RTConn, data *Message) error {
+func HandleData(c *RTConn, data *Message) error {
 	switch data.Event {
 	default:
 		c.Emit(data)
@@ -102,7 +105,7 @@ func handleData(c *RTConn, data *Message) error {
 }
 
 // readPump reads and parses incoming JSON blobs before passing them to handleData.
-func (c *RTConn) readPump() {
+func (c *RTConn) ReadPump() {
 	defer func() {
 		for _, room := range c.rooms {
 			room.leave <- c
@@ -130,13 +133,13 @@ func (c *RTConn) readPump() {
 }
 
 // write writes data to the client over the websocket connection.
-func (c *RTConn) write(mt int, payload []byte) error {
+func (c *RTConn) Write(mt int, payload []byte) error {
 	c.socket.SetWriteDeadline(time.Now().Add(writeWait))
 	return c.socket.WriteMessage(mt, payload)
 }
 
-// writePump
-func (c *RTConn) writePump() {
+// WritePump
+func (c *RTConn) WritePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
@@ -146,23 +149,23 @@ func (c *RTConn) writePump() {
 		select {
 		case msg, ok := <-c.send:
 			if !ok {
-				c.write(websocket.CloseMessage, []byte{})
+				c.Write(websocket.CloseMessage, []byte{})
 				return
 			}
-			if err := c.write(websocket.TextMessage, msg); err != nil {
+			if err := c.Write(websocket.TextMessage, msg); err != nil {
 				return
 			}
 		case <-ticker.C:
-			if err := c.write(websocket.PingMessage, []byte{}); err != nil {
+			if err := c.Write(websocket.PingMessage, []byte{}); err != nil {
 				return
 			}
 		}
 	}
 }
 
-// findRoute returns the variables specified in the config.json
+// FindRoute returns the variables specified in the config.json
 // file that match the path requested.
-func findRoute(path string) map[string]string {
+func FindRoute(path string) map[string]string {
 	route := make(map[string]string)
 	if _, ok := config.Routes[path]; ok {
 		route = config.Routes[path]
@@ -199,7 +202,7 @@ func findRoute(path string) map[string]string {
 func (c *RTConn) SendView(path string) {
 	var doc bytes.Buffer
 	var err error
-	route := findRoute(path)
+	route := FindRoute(path)
 	if _, ok := route["template"]; !ok {
 		log.Println("No template for the specified path: ", path)
 		return

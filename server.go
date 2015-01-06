@@ -7,9 +7,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"regexp"
-	"strconv"
-	"strings"
 )
 
 // Read a secure cookie and return its value.
@@ -40,8 +37,8 @@ func SetCookieHandler(w http.ResponseWriter, r *http.Request, cookname string, c
 	return
 }
 
-// registerHandler handles user registration and only handles POST requests.
-func registerHandler(w http.ResponseWriter, r *http.Request) {
+// RegisterHandler handles user registration and only handles POST requests.
+func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Invalid request method.", 405)
 		return
@@ -95,8 +92,8 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(500)
 }
 
-// loginHandler handles user logins and only handles POST requests.
-func loginHandler(w http.ResponseWriter, r *http.Request) {
+// LoginHandler handles user logins and only handles POST requests.
+func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Invalid request method.", 405)
 		return
@@ -128,8 +125,8 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(500)
 }
 
-// baseHandler server the base.html file and handles the initial request
-func baseHandler(w http.ResponseWriter, r *http.Request) {
+// BaseHandler server the base.html file and handles the initial request
+func BaseHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", 405)
 		return
@@ -142,31 +139,31 @@ func baseHandler(w http.ResponseWriter, r *http.Request) {
 	config.Templates.ExecuteTemplate(w, "base", nil)
 }
 
-// staticHandler serves the static content
-func staticHandler(w http.ResponseWriter, r *http.Request) {
+// StaticHandler serves the static content
+func StaticHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, r.URL.Path[1:])
 }
 
-// socketHandler handles incoming WebSocket requests by calling NewConnection.
-func socketHandler(w http.ResponseWriter, r *http.Request) {
+// SocketHandler handles incoming WebSocket requests by calling NewConnection.
+func SocketHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", 405)
 		return
 	}
 	c := NewConnection(w, r)
 	if c != nil {
-		go c.writePump()
+		go c.WritePump()
 		c.Join("root")
-		c.readPump()
+		c.ReadPump()
 	}
 }
 
 // StartWebserver starts the webserver.
 func StartWebserver() {
-	http.HandleFunc("/", baseHandler)
-	http.HandleFunc("/login", loginHandler)
-	http.HandleFunc("/register", registerHandler)
-	http.HandleFunc("/ws", socketHandler)
-	http.HandleFunc("/static/", staticHandler)
+	http.HandleFunc("/", BaseHandler)
+	http.HandleFunc("/login", LoginHandler)
+	http.HandleFunc("/register", RegisterHandler)
+	http.HandleFunc("/ws", SocketHandler)
+	http.HandleFunc("/static/", StaticHandler)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", config.Port), nil))
 }

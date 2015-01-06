@@ -23,7 +23,7 @@ type RTConfig struct {
 var config = &RTConfig{}
 
 // ParseConfig parses the config.json file.
-func parseConfig(filepath string) {
+func ParseConfig(filepath string) {
 	file, err := ioutil.ReadFile(filepath)
 	if err != nil {
 		log.Fatal("Could not parse config.json: ", err)
@@ -38,7 +38,7 @@ func parseConfig(filepath string) {
 }
 
 func NewApp() {
-	parseConfig("./config.json")
+	ParseConfig("./config.json")
 	for dbase, params := range config.Database {
 		NewDatabase(dbase, params)
 	}

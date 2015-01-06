@@ -15,7 +15,7 @@ import (
 
 type RTDatabase struct {
 	name       string
-	parameters map[string]string
+	params     map[string]string
 	buckets    map[string]*riak.Bucket
 	dsn        string
 	create     string
@@ -179,7 +179,7 @@ func (db *RTDatabase) Start() {
 		if err := riak.ConnectClient(db.dsn); err != nil {
 			log.Fatal("Cannot connect, is Riak running?")
 		}
-		tableList := strings.Split(db.parameters["buckets"], ",")
+		tableList := strings.Split(db.params["buckets"], ",")
 		for _, bname := range tableList {
 			if bname == "users" {
 				usersTableExists = true
@@ -195,10 +195,10 @@ func (db *RTDatabase) Start() {
 			log.Fatal(err)
 		}
 		db.connection = dbconn
-		if _, exists := db.parameters["tables"]; !exists {
+		if _, exists := db.params["tables"]; !exists {
 			return
 		}
-		tableList := strings.Split(db.parameters["tables"], ",")
+		tableList := strings.Split(db.params["tables"], ",")
 		for _, table := range tableList {
 			if table == "users" {
 				usersTableExists = true
@@ -218,29 +218,29 @@ func (db *RTDatabase) Start() {
 }
 
 // NewDatabase returns a new instance of RTDatabase
-func NewDatabase(name string, parameters map[string]string) *RTDatabase {
+func NewDatabase(name string, params map[string]string) *RTDatabase {
 	var dsn string
 	var create string
 	switch name {
 	case "riak":
-		dsn = fmt.Sprintf("%s:%s", parameters["host"], parameters["port"])
+		dsn = fmt.Sprintf("%s:%s", params["host"], params["port"])
 		create = ""
 	case "postgres":
-		dsn = fmt.Sprintf("dbname=%s user=%s password=%s host=%s sslmode=%s fallback_application_name=%s connect_timeout=%s sslcert=%s sslkey=%s sslrootcert=%s", parameters["dbname"], parameters["user"], parameters["password"], parameters["host"], parameters["sslmode"], parameters["fallback_application_name"], parameters["connect_timeout"], parameters["sslcert"], parameters["sslkey"], parameters["sslrootcert"])
+		dsn = fmt.Sprintf("dbname=%s user=%s password=%s host=%s sslmode=%s fallback_application_name=%s connect_timeout=%s sslcert=%s sslkey=%s sslrootcert=%s", params["dbname"], params["user"], params["password"], params["host"], params["sslmode"], params["fallback_application_name"], params["connect_timeout"], params["sslcert"], params["sslkey"], params["sslrootcert"])
 		create = "CREATE TABLE IF NOT EXISTS %s (hash VARCHAR(255) NOT NULL UNIQUE PRIMARY KEY, data BYTEA)"
 	case "mysql":
-		dsn = fmt.Sprintf("%s:%s@%s/%s?allowAllFiles=%s&allowOldPasswords=%s&charset=%s&collation=%s&clientFoundRows=%s&loc=%s&parseTime=%s&strict=%s&timeout=%s&tls=%s", parameters["user"], parameters["password"], parameters["host"], parameters["dbname"], parameters["allowAllFiles"], parameters["allowOldPasswords"], parameters["charset"], parameters["collation"], parameters["clientFoundRows"], parameters["loc"], parameters["parseTime"], parameters["strict"], parameters["timeout"], parameters["tls"])
+		dsn = fmt.Sprintf("%s:%s@%s/%s?allowAllFiles=%s&allowOldPasswords=%s&charset=%s&collation=%s&clientFoundRows=%s&loc=%s&parseTime=%s&strict=%s&timeout=%s&tls=%s", params["user"], params["password"], params["host"], params["dbname"], params["allowAllFiles"], params["allowOldPasswords"], params["charset"], params["collation"], params["clientFoundRows"], params["loc"], params["parseTime"], params["strict"], params["timeout"], params["tls"])
 		create = "CREATE TABLE IF NOT EXISTS %s (hash VARCHAR(255) NOT NULL UNIQUE PRIMARY KEY, data LONGBLOB)"
 	case "sqlite3":
-		dsn = fmt.Sprintf("%s", parameters["file"])
+		dsn = fmt.Sprintf("%s", params["file"])
 		create = "CREATE TABLE IF NOT EXISTS %s (hash VARCHAR(255) NOT NULL UNIQUE PRIMARY KEY, data BLOB)"
 	}
 	db := &RTDatabase{
-		name:       name,
-		buckets:    make(map[string]*riak.Bucket),
-		parameters: parameters,
-		dsn:        dsn,
-		create:     create,
+		name:    name,
+		buckets: make(map[string]*riak.Bucket),
+		params:  params,
+		dsn:     dsn,
+		create:  create,
 	}
 	// Add the new instance of RTDatabase to the DBManager
 	DBManager[name] = db
