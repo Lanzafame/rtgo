@@ -36,7 +36,7 @@ type RTConn struct {
 var ConnManager = make(map[string]*RTConn)
 
 // HandleData handles incoming JSON data received by a WebSocket connection, or an RTConn instance.
-func HandleData(c *RTConn, data *Message) error {
+func handleData(c *RTConn, data *Message) error {
 	switch data.Event {
 	default:
 		c.Emit(data)
@@ -47,9 +47,9 @@ func HandleData(c *RTConn, data *Message) error {
 	case "request":
 		c.SendView(data.Payload)
 	case "getObj":
-		if c.privilege != "admin" {
-			return nil
-		}
+		// if c.privilege != "admin" {
+		//     return nil
+		// }
 		payload := &DBMessage{}
 		if err := json.Unmarshal([]byte(data.Payload), payload); err != nil {
 			return err
@@ -68,9 +68,9 @@ func HandleData(c *RTConn, data *Message) error {
 		}
 		c.Emit(newdata)
 	case "insertObj":
-		//	if c.privilege != "admin" {
-		//		return
-		//	}
+		if c.privilege != "admin" {
+			return nil
+		}
 		payload := &DBMessage{}
 		err := json.Unmarshal([]byte(data.Payload), payload)
 		if err != nil {
@@ -160,12 +160,46 @@ func (c *RTConn) writePump() {
 	}
 }
 
+// findRoute returns the variables specified in the config.json
+// file that match the path requested.
+func findRoute(path string) map[string]string {
+	route := make(map[string]string)
+	if _, ok := config.Routes[path]; ok {
+		route = config.Routes[path]
+	} else {
+		for key, _ := range config.Routes {
+			if !strings.HasPrefix(key, "^") {
+				continue
+			}
+			reg, err := regexp.Compile(key)
+			if err != nil {
+				continue
+			}
+			match := reg.FindStringSubmatch(path)
+			if match == nil || len(match) == 0 {
+				continue
+			}
+			for k, val := range config.Routes[key] {
+				if !strings.HasPrefix(val, "$") {
+					route[k] = val
+					continue
+				}
+				index, err := strconv.Atoi(string(val[1]))
+				if err != nil {
+					continue
+				}
+				route[k] = match[index]
+			}
+		}
+	}
+	return route
+}
+
 // SendView sends the view associated with the requested path.
 func (c *RTConn) SendView(path string) {
 	var doc bytes.Buffer
 	var err error
-	route := FindRoute(path)
-	log.Println(route)
+	route := findRoute(path)
 	if _, ok := route["template"]; !ok {
 		log.Println("No template for the specified path: ", path)
 		return
@@ -245,18 +279,4 @@ func NewConnection(w http.ResponseWriter, r *http.Request) *RTConn {
 	}
 	ConnManager[c.id] = c
 	return c
-}
-
-// SocketHandler handles incoming WebSocket requests by calling NewConnection.
-func SocketHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		http.Error(w, "Method not allowed", 405)
-		return
-	}
-	c := NewConnection(w, r)
-	if c != nil {
-		go c.writePump()
-		c.Join("root")
-		c.readPump()
-	}
 }

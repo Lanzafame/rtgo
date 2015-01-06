@@ -8,7 +8,7 @@ import (
 	"log"
 )
 
-type Settings struct {
+type RTConfig struct {
 	Port       int
 	Cookiename string
 	Templates  *template.Template
@@ -20,10 +20,10 @@ type Settings struct {
 }
 
 // The global config variable to which the contents of the parsed config.json file are assigned to.
-var config = &Settings{}
+var config = &RTConfig{}
 
 // ParseConfig parses the config.json file.
-func ParseConfig(filepath string) {
+func parseConfig(filepath string) {
 	file, err := ioutil.ReadFile(filepath)
 	if err != nil {
 		log.Fatal("Could not parse config.json: ", err)
@@ -38,9 +38,9 @@ func ParseConfig(filepath string) {
 }
 
 func NewApp() {
-	ParseConfig("./config.json")
+	parseConfig("./config.json")
 	for dbase, params := range config.Database {
 		NewDatabase(dbase, params)
 	}
-	InitWebserver()
+	StartWebserver()
 }

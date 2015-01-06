@@ -40,8 +40,8 @@ func SetCookieHandler(w http.ResponseWriter, r *http.Request, cookname string, c
 	return
 }
 
-// RegisterHandler handles user registration and only handles POST requests.
-func RegisterHandler(w http.ResponseWriter, r *http.Request) {
+// registerHandler handles user registration and only handles POST requests.
+func registerHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Invalid request method.", 405)
 		return
@@ -95,8 +95,8 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(500)
 }
 
-// LoginHandler handles user logins and only handles POST requests.
-func LoginHandler(w http.ResponseWriter, r *http.Request) {
+// loginHandler handles user logins and only handles POST requests.
+func loginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Invalid request method.", 405)
 		return
@@ -128,8 +128,8 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(500)
 }
 
-// BaseHandler server the base.html file and handles the initial request
-func BaseHandler(w http.ResponseWriter, r *http.Request) {
+// baseHandler server the base.html file and handles the initial request
+func baseHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", 405)
 		return
@@ -142,52 +142,31 @@ func BaseHandler(w http.ResponseWriter, r *http.Request) {
 	config.Templates.ExecuteTemplate(w, "base", nil)
 }
 
-// StaticHandler serves the static content
-func StaticHandler(w http.ResponseWriter, r *http.Request) {
+// staticHandler serves the static content
+func staticHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, r.URL.Path[1:])
 }
 
-// FindRoute returns the variables specified in the config.json
-// file that match the path requested.
-func FindRoute(path string) map[string]string {
-	route := make(map[string]string)
-	if _, ok := config.Routes[path]; ok {
-		route = config.Routes[path]
-	} else {
-		for key, _ := range config.Routes {
-			if !strings.HasPrefix(key, "^") {
-				continue
-			}
-			reg, err := regexp.Compile(key)
-			if err != nil {
-				continue
-			}
-			match := reg.FindStringSubmatch(path)
-			if match == nil || len(match) == 0 {
-				continue
-			}
-			for k, val := range config.Routes[key] {
-				if !strings.HasPrefix(val, "$") {
-					route[k] = val
-					continue
-				}
-				index, err := strconv.Atoi(string(val[1]))
-				if err != nil {
-					continue
-				}
-				route[k] = match[index]
-			}
-		}
+// socketHandler handles incoming WebSocket requests by calling NewConnection.
+func socketHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", 405)
+		return
 	}
-	return route
+	c := NewConnection(w, r)
+	if c != nil {
+		go c.writePump()
+		c.Join("root")
+		c.readPump()
+	}
 }
 
-// InitWebserver starts the webserver.
-func InitWebserver() {
-	http.HandleFunc("/", BaseHandler)
-	http.HandleFunc("/login", LoginHandler)
-	http.HandleFunc("/register", RegisterHandler)
-	http.HandleFunc("/ws", SocketHandler)
-	http.HandleFunc("/static/", StaticHandler)
+// StartWebserver starts the webserver.
+func StartWebserver() {
+	http.HandleFunc("/", baseHandler)
+	http.HandleFunc("/login", loginHandler)
+	http.HandleFunc("/register", registerHandler)
+	http.HandleFunc("/ws", socketHandler)
+	http.HandleFunc("/static/", staticHandler)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", config.Port), nil))
 }

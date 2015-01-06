@@ -6,6 +6,7 @@ A Go real-time web framework that all starts with a config.json file.  Right now
 
 ## config.json
 There is an example config.json file (config.json.example) in the repo which clearly depicts the possible fields.  I have specified them below as well:
+- **port** - the port 
 - **cookiename** - the name of the cookie to be used
 - **database** - an object specifying the databases to use
   - **postgres** - http://godoc.org/github.com/lib/pq
@@ -19,13 +20,18 @@ There is an example config.json file (config.json.example) in the repo which cle
     - **controller** - the javascript controller associated with and run when this route is requested, and the template is rendered
 
 
-## command-line tool
-This package comes with a very simple command-line tool with with only a few commands at the moment:
-- **add controller &lt;name&gt;** - add a controller with the specified name; this adds a &lt;script&gt; tag to base.html and a file to /static/js/controllers with the name specified.
-- **del controller &lt;name&gt;** - delete a controller with the specified name; this deletes a &lt;script&gt; tag from base.html and a file in /static/js/controllers with the name specified.
-- **add view &lt;name&gt;** - add a view with the specified name; this adds a file to /static/views with the specified name.
-- **del view &lt;name&gt;** - delete a view with the specefied name; this deletes a file from /static/views with the specified name.
-
 ## DOM
 - **data-rt-view=""** - Assign this attribute to the element which will act as the container for requested views. By default, this is already specified in base.html.
 - **data-rt-href="{path}"** - All elements with this attribute will have on onclick listener attached to them. When clicked, the corresponding view will be requested.
+
+
+## API
+- **type RTConfig**
+- **type RTConn**
+- **type RTRoom**
+- **type RTDatabase**
+- **type Message**
+- **type DBMessage**
+- **ConnManager map[string]*RTConn**
+- **RoomManager map[string]*RTRoom**
+- **DBManager map[string]*RTDatabase**
