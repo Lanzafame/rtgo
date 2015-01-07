@@ -19,10 +19,10 @@ type RTConfig struct {
 	Routes     map[string]map[string]string
 }
 
-// The global config variable to which the contents of the parsed config.json file are assigned to.
+// config holds the values of the config.json file.
 var config = &RTConfig{}
 
-// ParseConfig parses the config.json file.
+// ParseConfig parses a JSON file.
 func ParseConfig(filepath string) {
 	file, err := ioutil.ReadFile(filepath)
 	if err != nil {
@@ -37,6 +37,8 @@ func ParseConfig(filepath string) {
 	config.Scook = securecookie.New(config.HashKey, config.BlockKey)
 }
 
+// NewApp parses a config.json file, instantiates the databases,
+// and starts the web server.
 func NewApp() {
 	ParseConfig("./config.json")
 	for dbase, params := range config.Database {

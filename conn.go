@@ -36,10 +36,13 @@ type RTConn struct {
 	privilege string
 }
 
+// ConnManager manages, or holds, all existing connections.
 var ConnManager = make(map[string]*RTConn)
 
-// HandleData handles incoming JSON data received by a WebSocket connection, or an RTConn instance.
-func HandleData(c *RTConn, data *Message) error {
+// HandleData routes a received message.
+// By default, the message is emitted.
+// It returns an error if any occur.
+func (c *RTConn) HandleData(data *Message) error {
 	switch data.Event {
 	default:
 		c.Emit(data)
@@ -104,7 +107,7 @@ func HandleData(c *RTConn, data *Message) error {
 	return nil
 }
 
-// readPump reads and parses incoming JSON blobs before passing them to handleData.
+// ReadPump reads and parses incoming messages before passing them to HandleData.
 func (c *RTConn) ReadPump() {
 	defer func() {
 		for _, room := range c.rooms {
@@ -126,19 +129,19 @@ func (c *RTConn) ReadPump() {
 			}
 			break
 		}
-		if err := HandleData(c, data); err != nil {
+		if err := c.HandleData(data); err != nil {
 			log.Println(err)
 		}
 	}
 }
 
-// write writes data to the client over the websocket connection.
+// Write writes a message with the given message type and payload to the WebSocket connection.
 func (c *RTConn) Write(mt int, payload []byte) error {
 	c.socket.SetWriteDeadline(time.Now().Add(writeWait))
 	return c.socket.WriteMessage(mt, payload)
 }
 
-// WritePump
+// WritePump pumps messages from a room to the WebSocket connection.
 func (c *RTConn) WritePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
@@ -163,8 +166,8 @@ func (c *RTConn) WritePump() {
 	}
 }
 
-// FindRoute returns the variables specified in the config.json
-// file that match the path requested.
+// FindRoute loops through all routes attempting to match path.
+// It returns the matched route.
 func FindRoute(path string) map[string]string {
 	route := make(map[string]string)
 	if _, ok := config.Routes[path]; ok {
@@ -198,7 +201,7 @@ func FindRoute(path string) map[string]string {
 	return route
 }
 
-// SendView sends the view associated with the requested path.
+// SendView sends the view matching requested path.
 func (c *RTConn) SendView(path string) {
 	var doc bytes.Buffer
 	var err error
@@ -208,8 +211,6 @@ func (c *RTConn) SendView(path string) {
 		return
 	}
 	collection := make([]interface{}, 0)
-	// If a table is specified in the config.json file under the matched
-	// route, retrieve the values in the table.
 	if _, ok := route["table"]; ok {
 		for _, db := range DBManager {
 			collection, err = db.GetAllObjs(route["table"])
@@ -219,8 +220,6 @@ func (c *RTConn) SendView(path string) {
 			break
 		}
 	}
-	// Render the retrieved database values in the template specified in the
-	// config.json file for the requested route.
 	config.Templates.ExecuteTemplate(&doc, route["template"], collection)
 	response := map[string]interface{}{
 		"room":  "root",
@@ -238,7 +237,7 @@ func (c *RTConn) SendView(path string) {
 	c.send <- data
 }
 
-// Join will cause a connection to join a specified room.
+// Join will cause the WebSocket connection to join a room with name.
 func (c *RTConn) Join(name string) {
 	var room *RTRoom
 	if _, ok := RoomManager[name]; ok {
@@ -250,7 +249,7 @@ func (c *RTConn) Join(name string) {
 	c.rooms[name] = room
 }
 
-// Leave removes a connection from a specified room.
+// Leave removes the WebSocket connection from a room with name.
 func (c *RTConn) Leave(name string) {
 	if room, ok := RoomManager[name]; ok {
 		room.Leave(c)
@@ -258,14 +257,16 @@ func (c *RTConn) Leave(name string) {
 	}
 }
 
-// Emit sends an instance of Message to all clients in the specified room.
+// Emit sends a message to all connections in a room specified in payload.
 func (c *RTConn) Emit(payload *Message) {
 	if room, ok := RoomManager[payload.Room]; ok {
 		room.Emit(payload)
 	}
 }
 
-// NewConnection returns an instance of RTConn upon upgrading the incoming request.
+// NewConnection upgrades an icoming HTTP request, creates a new WebSocket
+// connection, and adds it to ConnManager.
+// It returns the new connection.
 func NewConnection(w http.ResponseWriter, r *http.Request) *RTConn {
 	cookie := ReadCookieHandler(w, r, config.Cookiename)
 	socket, err := upgrader.Upgrade(w, r, nil)

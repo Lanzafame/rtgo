@@ -14,8 +14,10 @@ type RTRoom struct {
 	send    chan []byte
 }
 
+// RoomManager manages, or holds, all existing rooms.
 var RoomManager = make(map[string]*RTRoom)
 
+// Start activates the room.
 func (r *RTRoom) Start() {
 	for {
 		select {
@@ -62,18 +64,22 @@ func (r *RTRoom) Start() {
 	}
 }
 
+// Stop deactivates the room.
 func (r *RTRoom) Stop() {
 	r.stop <- true
 }
 
+// Join will add a connection to the room.
 func (r *RTRoom) Join(c *RTConn) {
 	r.join <- c
 }
 
+// Leave will remove a connection from a room.
 func (r *RTRoom) Leave(c *RTConn) {
 	r.leave <- c
 }
 
+// Emit will send a message to all connections in the room.
 func (r *RTRoom) Emit(payload *Message) {
 	data, err := json.Marshal(payload)
 	if err != nil {
@@ -83,6 +89,9 @@ func (r *RTRoom) Emit(payload *Message) {
 	r.send <- data
 }
 
+// NewRoom will create a new room with the specified name,
+// start it, and add it to RoomManager.
+// It returns the new room.
 func NewRoom(name string) *RTRoom {
 	r := &RTRoom{
 		name:    name,

@@ -9,7 +9,8 @@ import (
 	"net/http"
 )
 
-// Read a secure cookie and return its value.
+// ReadCookieHandler reads a secure cookie with the name specified by cookname.
+// It returns the cookie value.
 func ReadCookieHandler(w http.ResponseWriter, r *http.Request, cookname string) map[string]string {
 	cookie, err := r.Cookie(cookname)
 	if err != nil {
@@ -22,7 +23,8 @@ func ReadCookieHandler(w http.ResponseWriter, r *http.Request, cookname string) 
 	return cookvalue
 }
 
-// Set a secure cookie with a cookie name and value.
+// SetCookieHandler sets a secure cookie with the name specified by cookname
+// and with a value specified by cookvalue.
 func SetCookieHandler(w http.ResponseWriter, r *http.Request, cookname string, cookvalue map[string]string) {
 	encoded, err := config.Scook.Encode(cookname, cookvalue)
 	if err != nil {
@@ -37,13 +39,12 @@ func SetCookieHandler(w http.ResponseWriter, r *http.Request, cookname string, c
 	return
 }
 
-// RegisterHandler handles user registration and only handles POST requests.
+// RegisterHandler handles user registration and only parses POST requests.
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Invalid request method.", 405)
 		return
 	}
-	// Parse the incoming form data.
 	if err := r.ParseMultipartForm(1024 * 1024); err != nil {
 		w.WriteHeader(500)
 		return
@@ -51,9 +52,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	username := r.FormValue("username")
 	email := r.FormValue("email")
 	password := r.FormValue("password")
-	// Loop through the list of database connections held in DBManager.
 	for _, db := range DBManager {
-		// If the specified username already exists, move on to the next database.
 		if _, err := db.GetObj("users", username); err == nil {
 			continue
 		}
@@ -61,8 +60,6 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		if _, err := rand.Read(randombytes); err != nil {
 			continue
 		}
-		// Generate a SHA256 hash for the parsed user credentials.
-		// SHA256Sum(username + email + password + salt)
 		salt := fmt.Sprintf("%x", sha1.Sum(randombytes))
 		hashstring := []byte(fmt.Sprintf("%s%s%s%s", username, email, password, salt))
 		passhash := fmt.Sprintf("%x", sha256.Sum256(hashstring))
@@ -76,12 +73,9 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 				"bitmask":   0,
 			},
 		}
-		// Insert the new user credentials into the database.
 		if err := db.InsertObj("users", username, obj); err != nil {
 			continue
 		}
-		// Set a secure cookie with the cookiename specified in config.json if the
-		// new user credentials were successfully entered into the database.
 		SetCookieHandler(w, r, config.Cookiename, map[string]string{
 			"username":  username,
 			"privilege": "user",
@@ -92,13 +86,12 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(500)
 }
 
-// LoginHandler handles user logins and only handles POST requests.
+// LoginHandler handles user logins and only parses POST requests.
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Invalid request method.", 405)
 		return
 	}
-	// Parse the received form data.
 	if err := r.ParseMultipartForm(1024 * 1024); err != nil {
 		w.WriteHeader(500)
 		return
@@ -125,7 +118,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(500)
 }
 
-// BaseHandler server the base.html file and handles the initial request
+// BaseHandler handles the initial HTTP request and serves the base.html file.
 func BaseHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", 405)
@@ -139,12 +132,12 @@ func BaseHandler(w http.ResponseWriter, r *http.Request) {
 	config.Templates.ExecuteTemplate(w, "base", nil)
 }
 
-// StaticHandler serves the static content
+// StaticHandler serves all static content.
 func StaticHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, r.URL.Path[1:])
 }
 
-// SocketHandler handles incoming WebSocket requests by calling NewConnection.
+// SocketHandler creates a new WebSocket connection.
 func SocketHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", 405)
@@ -158,7 +151,7 @@ func SocketHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// StartWebserver starts the webserver.
+// StartWebserver starts the web server.
 func StartWebserver() {
 	http.HandleFunc("/", BaseHandler)
 	http.HandleFunc("/login", LoginHandler)

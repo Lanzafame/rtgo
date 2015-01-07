@@ -22,9 +22,11 @@ type RTDatabase struct {
 	connection *sql.DB
 }
 
+// DBManager manages, or holds, all existing databases.
 var DBManager = make(map[string]*RTDatabase)
 
-// GetAllObjs returns an array of all objects in a database table.
+// GetAllObjs selects all rows and columns in a database table.
+// It returns an array of interfaces or an error.
 func (db *RTDatabase) GetAllObjs(table string) ([]interface{}, error) {
 	data := make([]interface{}, 0)
 	if db.name == "riak" {
@@ -83,7 +85,8 @@ func (db *RTDatabase) GetAllObjs(table string) ([]interface{}, error) {
 	return data, nil
 }
 
-// GetObj retrieves an object from a database table.
+// GetObj selects data from a table with the matching key.
+// It returns an interface or an error.
 func (db *RTDatabase) GetObj(table string, key string) (interface{}, error) {
 	var data interface{}
 	if db.name == "riak" {
@@ -118,7 +121,8 @@ func (db *RTDatabase) GetObj(table string, key string) (interface{}, error) {
 	return data, nil
 }
 
-// DeleteObj deletes an object from a database table.
+// DeleteObj deletes a row from a database table with a matching key.
+// It may return an error.
 func (db *RTDatabase) DeleteObj(table string, key string) error {
 	if db.name == "riak" {
 		if _, exists := db.buckets[table]; !exists {
@@ -141,7 +145,8 @@ func (db *RTDatabase) DeleteObj(table string, key string) error {
 	return nil
 }
 
-// InsertObj inserts an object into a database table.
+// InsertObj inserts data into a database table with the specified key.
+// It may return an error.
 func (db *RTDatabase) InsertObj(table string, key string, data interface{}) error {
 	blob, err := json.Marshal(&data)
 	if err != nil {
@@ -171,8 +176,9 @@ func (db *RTDatabase) InsertObj(table string, key string, data interface{}) erro
 	return nil
 }
 
-// Start starts the database and initializes the database tables/buckets.
-// If a users table is not specified in the config.json file, create it anyways.
+// Start starts the database and initializes its tables/buckets.
+// If a users table is not specified in the config.json file,
+// one is created anyways.
 func (db *RTDatabase) Start() {
 	usersTableExists := false
 	if db.name == "riak" {
@@ -217,7 +223,8 @@ func (db *RTDatabase) Start() {
 	}
 }
 
-// NewDatabase returns a new instance of RTDatabase
+// NewDatabase creates a new database, adds it to DBManager, and starts it.
+// It returns the new database.
 func NewDatabase(name string, params map[string]string) *RTDatabase {
 	var dsn string
 	var create string
@@ -242,7 +249,6 @@ func NewDatabase(name string, params map[string]string) *RTDatabase {
 		dsn:     dsn,
 		create:  create,
 	}
-	// Add the new instance of RTDatabase to the DBManager
 	DBManager[name] = db
 	db.Start()
 	return db
