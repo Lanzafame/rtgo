@@ -69,19 +69,19 @@ There is an example config.json file (config.json.example) in the repo which cle
   - **Table string `json:"table"`**
   - **Key string `json:"key"`**
   - **Data string `json:"data"`**
-- **ConnManager map[string]*RTConn**
-- **RoomManager map[string]*RTRoom**
-- **DBManager map[string]*RTDatabase**
-- **func NewApp()**
-- **func NewConnection(w http.ResponseWriter, r *http.Request) *RTConn**
-- **func NewRoom(name string) *RTRoom**
-- **func NewDatabase(name string, params map[string]string) *RTDatabase**
-- **func ReadCookieHandler(w http.ResponseWriter, r *http.Request, cookname string) map[string]string**
-- **func SetCookieHandler(w http.ResponseWriter, r *http.Request, cookname string, cookvalue map[string]string)**
-- **func RegisterHandler(w htp.ResponseWriter, r *http.Request)**
-- **func LoginHandler(w http.ResponseWriter, r *http.Request)**
-- **func BaseHandler(w http.ResponseWriter, r *http.Request)**
-- **func StaticHandler(w http.ResponseWriter, r *http.Request)**
-- **func SocketHandler(w http.ResponseWriter, r *http.Request)**
-- **func StartWebserver()**
-- **func HandleData(c *RTConn, data *Message) error* - handles all incoming parsed JSON blobs
+- **ConnManager map[string]*RTConn** - a map of all connections; each key is the connections unique id
+- **RoomManager map[string]*RTRoom** - a map of all rooms; each key is the name of a room
+- **DBManager map[string]*RTDatabase** - a map of all database connections; each key is the name of the database
+- **func NewApp()** - starts the app
+- **func NewConnection(w http.ResponseWriter, r *http.Request) *RTConn** - creates a new connection
+- **func NewRoom(name string) *RTRoom** - creates a new room
+- **func NewDatabase(name string, params map[string]string) *RTDatabase** - creates a new database
+- **func ReadCookieHandler(w http.ResponseWriter, r *http.Request, cookname string) map[string]string** - reads secure cookies
+- **func SetCookieHandler(w http.ResponseWriter, r *http.Request, cookname string, cookvalue map[string]string)** - sets secure cookies
+- **func RegisterHandler(w htp.ResponseWriter, r *http.Request)** - handles user registration
+- **func LoginHandler(w http.ResponseWriter, r *http.Request)** - handles user login
+- **func BaseHandler(w http.ResponseWriter, r *http.Request)** - serves base.html upon the inital HTTP request
+- **func StaticHandler(w http.ResponseWriter, r *http.Request)** - serves static files
+- **func SocketHandler(w http.ResponseWriter, r *http.Request)** - called upon each new websocket connection
+- **func StartWebserver()** - starts the web server on the port specified in config.json
+- **func HandleData(c *RTConn, data *Message) error** - handles all incoming parsed JSON blobs
