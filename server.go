@@ -39,8 +39,8 @@ func SetCookieHandler(w http.ResponseWriter, r *http.Request, cookname string, c
 	return
 }
 
-// RegisterHandler handles user registration and only parses POST requests.
-func RegisterHandler(w http.ResponseWriter, r *http.Request) {
+// registerHandler handles user registration and only parses POST requests.
+func registerHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Invalid request method.", 405)
 		return
@@ -86,8 +86,8 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(500)
 }
 
-// LoginHandler handles user logins and only parses POST requests.
-func LoginHandler(w http.ResponseWriter, r *http.Request) {
+// loginHandler handles user logins and only parses POST requests.
+func loginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Invalid request method.", 405)
 		return
@@ -118,8 +118,8 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(500)
 }
 
-// BaseHandler handles the initial HTTP request and serves the base.html file.
-func BaseHandler(w http.ResponseWriter, r *http.Request) {
+// baseHandler handles the initial HTTP request and serves the base.html file.
+func baseHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", 405)
 		return
@@ -132,13 +132,13 @@ func BaseHandler(w http.ResponseWriter, r *http.Request) {
 	config.Templates.ExecuteTemplate(w, "base", nil)
 }
 
-// StaticHandler serves all static content.
-func StaticHandler(w http.ResponseWriter, r *http.Request) {
+// staticHandler serves all static content.
+func staticHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, r.URL.Path[1:])
 }
 
-// SocketHandler creates a new WebSocket connection.
-func SocketHandler(w http.ResponseWriter, r *http.Request) {
+// socketHandler creates a new WebSocket connection.
+func socketHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", 405)
 		return
@@ -153,10 +153,13 @@ func SocketHandler(w http.ResponseWriter, r *http.Request) {
 
 // StartWebserver starts the web server.
 func StartWebserver() {
-	http.HandleFunc("/", BaseHandler)
-	http.HandleFunc("/login", LoginHandler)
-	http.HandleFunc("/register", RegisterHandler)
-	http.HandleFunc("/ws", SocketHandler)
-	http.HandleFunc("/static/", StaticHandler)
+	for dbase, params := range config.Database {
+		NewDatabase(dbase, params)
+	}
+	http.HandleFunc("/", baseHandler)
+	http.HandleFunc("/login", loginHandler)
+	http.HandleFunc("/register", registerHandler)
+	http.HandleFunc("/ws", socketHandler)
+	http.HandleFunc("/static/", staticHandler)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", config.Port), nil))
 }

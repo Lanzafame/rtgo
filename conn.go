@@ -5,6 +5,7 @@ import (
 	"code.google.com/p/go-uuid/uuid"
 	"encoding/json"
 	"errors"
+	"github.com/chuckpreslar/emission"
 	"github.com/gorilla/websocket"
 	"io"
 	"log"
@@ -38,14 +39,15 @@ type RTConn struct {
 
 // ConnManager manages, or holds, all existing connections.
 var ConnManager = make(map[string]*RTConn)
+var WSEmitter = emission.NewEmitter()
 
 // HandleData routes a received message.
-// By default, the message is emitted.
+// By default, the message is emitted on the WSEmitter.
 // It returns an error if any occur.
 func (c *RTConn) HandleData(data *Message) error {
 	switch data.Event {
 	default:
-		c.Emit(data)
+		WSEmitter.Emit(data.Event, c, data)
 	case "join":
 		c.Join(data.Room)
 	case "leave":
@@ -166,9 +168,9 @@ func (c *RTConn) WritePump() {
 	}
 }
 
-// FindRoute loops through all routes attempting to match path.
+// findRoute loops through all routes attempting to match path.
 // It returns the matched route.
-func FindRoute(path string) map[string]string {
+func findRoute(path string) map[string]string {
 	route := make(map[string]string)
 	if _, ok := config.Routes[path]; ok {
 		route = config.Routes[path]
@@ -205,7 +207,7 @@ func FindRoute(path string) map[string]string {
 func (c *RTConn) SendView(path string) {
 	var doc bytes.Buffer
 	var err error
-	route := FindRoute(path)
+	route := findRoute(path)
 	if _, ok := route["template"]; !ok {
 		log.Println("No template for the specified path: ", path)
 		return
