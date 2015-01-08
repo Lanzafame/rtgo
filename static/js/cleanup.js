@@ -1,5 +1,5 @@
 //    Title: cleanup.js
-//    Author: Jon Cody
+//    Author: JD
 //    Year: 2014
 //
 //    This program is free software: you can redistribute it and/or modify

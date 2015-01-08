@@ -1,3 +1,19 @@
+//    Title: app.go
+//    Author: JD
+//
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+//
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+//
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 package rtgo
 
 import (
@@ -20,11 +36,12 @@ import (
 )
 
 type App struct {
-	Emitter     *emission.Emitter
 	Port        int
 	Cookiename  string
 	Templates   *template.Template
 	Scook       *securecookie.SecureCookie
+	Emitter     *emission.Emitter
+	Handlers    map[string]func(w http.ResponseWriter, r *http.Request)
 	Database    map[string]map[string]string
 	Routes      map[string]map[string]string
 	ConnManager map[string]*Conn
@@ -281,7 +298,7 @@ func (a *App) NewDatabase(name string, params map[string]string) *Database {
 	return db
 }
 
-// Parse parses a JSON file.
+// Parse parses a JSON file and assigns the values to app.
 func (a *App) Parse(filepath string) {
 	file, err := ioutil.ReadFile(filepath)
 	if err != nil {
@@ -296,6 +313,13 @@ func (a *App) Parse(filepath string) {
 	a.Templates = template.Must(template.ParseGlob("./static/views/*"))
 }
 
+// AddHandler adds a handler to the web server.
+func (a *App) AddHandler(route string, handler func(w http.ResponseWriter, r *http.Request)) {
+	if _, ok := a.Handlers[route]; !ok {
+		a.Handlers[route] = handler
+	}
+}
+
 // Start starts the app.
 func (a *App) Start() {
 	for dbase, params := range a.Database {
@@ -306,6 +330,9 @@ func (a *App) Start() {
 	http.HandleFunc("/register", a.RegisterHandler)
 	http.HandleFunc("/ws", a.SocketHandler)
 	http.HandleFunc("/static/", a.StaticHandler)
+	for route, handler := range a.Handlers {
+		http.HandleFunc(route, handler)
+	}
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", a.Port), nil))
 }
 
@@ -314,6 +341,7 @@ func (a *App) Start() {
 func NewApp() *App {
 	app := &App{
 		Emitter:     emission.NewEmitter(),
+		Handlers:    make(map[string]func(w http.ResponseWriter, r *http.Request)),
 		ConnManager: make(map[string]*Conn),
 		RoomManager: make(map[string]*Room),
 		DBManager:   make(map[string]*Database),
@@ -321,3 +349,4 @@ func NewApp() *App {
 	app.Parse("./config.json")
 	return app
 }
+
