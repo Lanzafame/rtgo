@@ -71,15 +71,13 @@ func (db *Database) GetAllObjs(table string) ([]interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-
 		blobs := make([][]byte, len(cols))
 		dest := make([]interface{}, len(cols))
 		for i := range cols {
 			dest[i] = &blobs[i]
 		}
 		for rows.Next() {
-			err := rows.Scan(dest...)
-			if err != nil {
+			if err := rows.Scan(dest...); err != nil {
 				return nil, err
 			}
 			collect := make(map[string]interface{})
