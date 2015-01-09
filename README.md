@@ -37,7 +37,7 @@ By default the below functions will not go through unless the user calling them 
 Enter the `cmd/` directory and run `go build -o $GOBIN/rtgo rtgo.go`
 
 This is a simple command-line tool where the following commands can be run:
-**rtgo add controller &lt;name&gt;**
-**rtgo del controller &lt;name&gt;**
-**rtgo add view &lt;name&gt;**
-**rtgo add view &lt;name&gt;**
+- **rtgo add controller &lt;name&gt;**
+- **rtgo del controller &lt;name&gt;**
+- **rtgo add view &lt;name&gt;**
+- **rtgo add view &lt;name&gt;**
