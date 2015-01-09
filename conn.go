@@ -61,8 +61,7 @@ func (c *Conn) SendView(path string) {
 	collection := make([]interface{}, 0)
 	if _, ok := route["table"]; ok {
 		for _, db := range c.app.DBManager {
-			collection, err = db.GetAllObjs(route["table"])
-			if err != nil {
+			if collection, err = db.GetAllObjs(route["table"]); err != nil {
 				continue
 			}
 			break
@@ -100,7 +99,7 @@ func (c *Conn) HandleData(data *Message) error {
 		c.SendView(data.Payload)
 	case "getObj":
 		if c.privilege != "admin" {
-		    return nil
+			return nil
 		}
 		payload := &DBMessage{}
 		if err := json.Unmarshal([]byte(data.Payload), payload); err != nil {
@@ -124,8 +123,7 @@ func (c *Conn) HandleData(data *Message) error {
 			return nil
 		}
 		payload := &DBMessage{}
-		err := json.Unmarshal([]byte(data.Payload), payload)
-		if err != nil {
+		if err := json.Unmarshal([]byte(data.Payload), payload); err != nil {
 			return err
 		}
 		if _, exists := c.app.DBManager[payload.DB]; !exists {
@@ -139,8 +137,7 @@ func (c *Conn) HandleData(data *Message) error {
 			return nil
 		}
 		payload := &DBMessage{}
-		err := json.Unmarshal([]byte(data.Payload), payload)
-		if err != nil {
+		if err := json.Unmarshal([]byte(data.Payload), payload); err != nil {
 			return err
 		}
 		if _, exists := c.app.DBManager[payload.DB]; !exists {

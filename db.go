@@ -52,13 +52,13 @@ func (db *Database) GetAllObjs(table string) ([]interface{}, error) {
 			return nil, err
 		}
 		for _, key := range keys {
-			collect := make(map[string]string)
+			collect := make(map[string]interface{})
 			obj, err := db.GetObj(table, string(key))
 			if err != nil {
 				return nil, err
 			}
 			collect["hash"] = string(key)
-			collect["data"] = obj.(string)
+			collect["data"] = obj
 			data = append(data, collect)
 		}
 	} else {
@@ -82,7 +82,7 @@ func (db *Database) GetAllObjs(table string) ([]interface{}, error) {
 			if err != nil {
 				return nil, err
 			}
-			collect := make(map[string]string)
+			collect := make(map[string]interface{})
 			for i, blob := range blobs {
 				var value interface{}
 				col := cols[i]
@@ -91,7 +91,7 @@ func (db *Database) GetAllObjs(table string) ([]interface{}, error) {
 				} else if err := json.Unmarshal(blob, &value); err != nil {
 					return nil, err
 				}
-				collect[col] = value.(string)
+				collect[col] = value
 			}
 			data = append(data, collect)
 		}
@@ -199,7 +199,7 @@ func (db *Database) Start() {
 		if err := riak.ConnectClient(db.dsn); err != nil {
 			log.Fatal("Cannot connect, is Riak running?")
 		}
-		tableList := strings.Split(db.params["buckets"], ",")
+		tableList := strings.Split(db.params["tables"], ",")
 		for _, bname := range tableList {
 			if bname == "users" {
 				usersTableExists = true

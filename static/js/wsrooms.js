@@ -25,17 +25,19 @@
  * @param {String || Array} protocol
  */
     function WSRooms(url) {
-        if (global.WebSocket && typeof url === 'string') {
-            eventEmitter(this);
-            this.open = false;
-            this.id = null;
-            this.room = 'root';
-            this.rooms = {};
-            this.socket = new WebSocket(url);
-            this.socket.onmessage = this.onmessage.bind(this);
-            this.socket.onclose = this.onclose.bind(this);
-            this.socket.onerror = this.onerror.bind(this);
+        if (!global.WebSocket || typeof url !== 'string') {
+            return;
         }
+        eventEmitter(this);
+        this.open = false;
+        this.id = null;
+        this.members = [];
+        this.room = 'root';
+        this.rooms = {};
+        this.socket = new WebSocket(url);
+        this.socket.onmessage = this.onmessage.bind(this);
+        this.socket.onclose = this.onclose.bind(this);
+        this.socket.onerror = this.onerror.bind(this);
     }
 
 /**
@@ -53,17 +55,18 @@
             event = room;
             room = 'root';
         }
-        if (this.open && typeof room === 'string' && typeof event === 'string' && typeof payload !== undefined && (room === 'root' || this.rooms.hasOwnProperty(room))) {
-            data.room = room;
-            data.event = event;
-            if (typeof payload !== 'string') {
-                try {
-                    payload = JSON.stringify(payload);
-                } catch (ignore) {}
-            }
-            data.payload = payload;
-            this.socket.send(JSON.stringify(data));
+        if (!this.open || typeof room !== 'string' || typeof event !== 'string' || typeof payload === undefined || (room !== 'root' && !this.rooms.hasOwnProperty(room))) {
+            return;
         }
+        data.room = room;
+        data.event = event;
+        if (typeof payload !== 'string') {
+            try {
+                payload = JSON.stringify(payload);
+            } catch (ignore) {}
+        }
+        data.payload = payload;
+        this.socket.send(JSON.stringify(data));
     };
 
 /**
@@ -74,29 +77,56 @@
  * @param {String || Array || Object || Boolean || Number || null} payload
  */
     WSRooms.prototype.handleMessage = function handleMessage(room, event, payload) {
-        if (event && typeof event === 'string' && room && typeof room === 'string' && typeof payload !== undefined) {
-            if (room === 'root') {
-                if (event === 'join') {
-                    this.id = payload;
-                    this.open = true;
-                    this.emit('open');
-                } else if (event === 'leave') {
-                    this.socket.close();
-                } else {
-                    this.emit(event, payload);
-                }
-            } else if (this.rooms.hasOwnProperty(room)) {
-                if (event === 'join') {
-                    this.rooms[room].open = true;
-                    this.rooms[room].emit('open');
-                } else if (event === 'leave') {
-                    this.rooms[room].open = false;
-                    this.rooms[room].emit('close');
-                    delete this.rooms[room];
-                } else {
-                    this.rooms[room].emit(event, payload);
-                }
+        var roomObj = this,
+            index;
+
+        if (!event || typeof event !== 'string' || !room || typeof room !== 'string' || typeof payload === undefined) {
+            return;
+        }
+        if (room !== 'root') {
+            if (!this.rooms.hasOwnProperty(room)) {
+                return;
             }
+            roomObj = this.rooms[room];
+        }
+        switch (event) {
+            case 'join':
+                roomObj.id = payload;
+                roomObj.open = true;
+                roomObj.emit('open');
+                if (room === 'root') {
+                    roomObj.send('root', 'joined', payload);
+                } else {
+                    roomObj.send('joined', payload);
+                }
+                break;
+            case 'joined':
+                index = roomObj.members.indexOf(payload);
+                if (roomObj.id !== payload && index === -1) {
+                    roomObj.members.push(payload);
+                    roomObj.emit('joined', payload)
+                }
+                break;
+            case 'leave':
+                if (room === 'root') {
+                    roomObj.socket.close();
+                } else {
+                    roomObj.open = false;
+                    roomObj.emit('close');
+                    delete this.rooms[room];
+                }
+                roomObj.send(roomObj.room, 'left', roomObj.id);
+                break;
+            case 'left':
+                index = roomObj.members.indexOf(payload);
+                if (roomObj.id !== payload && index !== -1) {
+                    roomObj.members.splice(index, 1);
+                    roomObj.emit('left', payload);
+                }
+                break;
+            default:
+                roomObj.emit(event, payload);
+                break;
         }
     };
 
@@ -123,7 +153,7 @@
                 payload = data.payload;    
             }
         } else {
-            payload = {};
+            payload = null;
         }
         event = data.event;
         room = data.room;
@@ -139,17 +169,19 @@
     WSRooms.prototype.join = function join(room) {
         var sock = {};
 
-        if (this.open && room && typeof room === 'string' && !this.rooms.hasOwnProperty(room)) {
-            eventEmitter(sock);
-            sock.id = this.id;
-            sock.open = false;
-            sock.room = room;
-            sock.send = this.send.bind(this, room);
-            sock.leave = this.leave.bind(this, room);
-            sock.close = sock.leave;
-            this.rooms[room] = sock;
-            this.send(room, 'join', null);
+        if (!this.open || !room || typeof room !== 'string' || this.rooms.hasOwnProperty(room)) {
+            return;
         }
+        eventEmitter(sock);
+        sock.id = null;
+        sock.members = [];
+        sock.open = false;
+        sock.room = room;
+        sock.send = this.send.bind(this, room);
+        sock.leave = this.leave.bind(this, room);
+        sock.close = sock.leave;
+        this.rooms[room] = sock;
+        this.send(room, 'join', null);
         return sock;
     };
 
@@ -159,12 +191,12 @@
  * @param {String} room
  */
     WSRooms.prototype.leave = function leave(room) {
-        this.send(room, 'leave', null)
+        this.send(room, 'leave', null);
     };
     WSRooms.prototype.close = WSRooms.prototype.leave;
 
 /**
- * WSRooms.onclose
+ * WSRooms.close
  * Called when an instance of WSRooms is closed.
  */
     WSRooms.prototype.onclose = function onclose() {

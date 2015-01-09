@@ -52,7 +52,7 @@ func (r *Room) Start() {
 			if _, ok := r.members[c]; ok {
 				payload := &Message{
 					Room:    r.name,
-					Event:   "leave",
+					Event:   "join",
 					Payload: c.id,
 				}
 				data, err := json.Marshal(payload)
