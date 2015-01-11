@@ -52,8 +52,16 @@ import "github.com/jdeezy/rtgo"
 
 var app *rtgo.App
 
+func uploadHandler(w http.ResponseWriter, r *http.Request) {
+    if r.Method != "POST" {
+        http.Error(w, "Method not allowed.", 405)
+    }
+    // do something here
+}
+
 func main() {
     app = rtgo.NewApp()
+    app.AddHandler("/upload", uploadHandler)
     app.Emitter.On("event-name", func(conn *rtgo.Conn, data *rtgo.Message) {
         // do something here
     })
