@@ -35,7 +35,7 @@ By default the below functions will not go through unless the user calling them 
 - **rtgo.deleteObj(db, table, key)** - delete an object from a database
 
 ## command-line tool
-Run `go build -o $GOBIN/cmd/rtgo rtgo.go`
+Run `go build -o $GOBIN/rtgo cmd/rtgo.go`
 
 This is a simple command-line tool where the following commands can be run:
 - **rtgo add controller &lt;name&gt;**
