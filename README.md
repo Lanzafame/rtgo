@@ -15,6 +15,7 @@ There is an example config.json file (config.json.example) in the repo which cle
 - **routes**
   - **route** - route can be either a string or a regular expression
     - **table** - the name of the database table to query upon the request for this route
+    - **key** - the key to the value which will be rendered into the template specified below; if no key is specified, all values will be gotten
     - **template** - the template to render when this route is requested; the database values in the table specified above will be rendered within the template
     - **controller** - the javascript controller associated with and run when this route is requested, and the template is rendered
 

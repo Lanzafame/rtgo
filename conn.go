@@ -61,10 +61,16 @@ func (c *Conn) SendView(path string) {
 	collection := make([]interface{}, 0)
 	if _, ok := route["table"]; ok {
 		for _, db := range c.app.DBManager {
-			if collection, err = db.GetAllObjs(route["table"]); err != nil {
-				continue
-			}
-			break
+            if _, k := route["key"]; k {
+                var obj interface{}
+                if obj, err = db.GetObj(route["table"], route["key"]); err != nil {
+                    continue
+                }
+                collection = append(collection, obj)
+                break
+            } else if collection, err = db.GetAllObjs(route["table"]); err == nil {
+	    		break
+            }
 		}
 	}
 	c.app.Templates.ExecuteTemplate(&doc, route["template"], collection)
