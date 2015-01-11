@@ -35,10 +35,28 @@ By default the below functions will not go through unless the user calling them 
 - **rtgo.deleteObj(db, table, key)** - delete an object from a database
 
 ## command-line tool
-Enter the `cmd/` directory and run `go build -o $GOBIN/rtgo rtgo.go`
+Run `go build -o $GOBIN/cmd/rtgo rtgo.go`
 
 This is a simple command-line tool where the following commands can be run:
 - **rtgo add controller &lt;name&gt;**
 - **rtgo del controller &lt;name&gt;**
 - **rtgo add view &lt;name&gt;**
 - **rtgo add view &lt;name&gt;**
+
+
+## Example
+```go
+package main
+
+import "github.com/jdeezy/rtgo"
+
+var app *rtgo.App
+
+func main() {
+    app = rtgo.NewApp()
+    app.Emitter.On("event-name", func(conn *rtgo.Conn, data *rtgo.Message) {
+        // do something here
+    })
+    app.Start()
+}
+```
