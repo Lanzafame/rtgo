@@ -1,6 +1,5 @@
 //    Title: cleanup.js
 //    Author: JD
-//    Year: 2014
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -40,12 +39,10 @@
     function typeOf(variable) {
         var type = typeof variable;
 
-        if (type === 'object') {
-            if (Array.isArray(variable)) {
-                type = 'array';
-            } else if (!variable) {
-                type = 'null';
-            }
+        if (Array.isArray(variable)) {
+            type = 'array';
+        } else if (type === 'object' && !variable) {
+            type = 'null';
         }
         return type;
     }
@@ -781,7 +778,9 @@
                 });
                 if (isObject(options.handlers)) {
                     Object.keys(options.handlers).forEach(function (ev) {
-                        el.addEventListener(ev, options.handlers[ev], false);
+                        if (isFunction(options.handlers[ev])) {
+                            el.addEventListener(ev, options.handlers[ev], false);
+                        }
                     });
                 }
                 if (isNode(options.parent)) {
@@ -811,15 +810,13 @@
             splitSelector = selector.split(/\s/);
             if (splitSelector.length > 1) {
                 nodes = selectAll(selector);
+            } else if (selector.charAt(0) === '#' && !selector.match(/\./)) {
+                nodes = {
+                    0: getbyid(selector.slice(1)),
+                    length: 1
+                };
             } else {
-                if (selector.charAt(0) === '#' && !selector.match(/\./)) {
-                    nodes = {
-                        0: getbyid(selector.slice(1)),
-                        length: 1
-                    };
-                } else {
-                    nodes = selectAll(selector);
-                }
+                nodes = selectAll(selector);
             }
         } else if (isNode(selector)) {
             nodes = {
@@ -847,6 +844,63 @@
     };
 
 /**
+ * data
+ * Set or get one or more data attributes.
+ * @param {String || Object} name
+ * @param {String || Undefined} value
+ * @return {Object || Array} this || values
+ */
+    Cleanup.prototype.data = function data(name, value) {
+        var values;
+
+        if (name && isString(name)) {
+            name = name.slice(0,4) !== 'data' ? undoCamelCase('data-' + name) : undoCamelCase(name);
+            if (isString(value) || isNumber(value) || isBoolean(value)) {
+                each(this, function (node) {
+                    node.setAttribute(name, value);
+                });
+            } else {
+                values = [];
+                each(this, function (node) {
+                    values.push(node.getAttribute(name));
+                });
+                return values.length === 1 ? values[0] : values;
+            }
+        } else if (isObject(name)) {
+            Object.keys(name).forEach(function (key) {
+                this.data(key, name[key]);
+            }, this);
+        } else if (isArray(name)) {
+            values = {};
+            name.forEach(function (key) {
+                values[key] = this.data(key);
+            }, this);
+            return values;
+        }
+        return this;
+    };
+
+/**
+ * remData
+ * Remove the value of a data attribute.
+ * @param {String} name
+ * @return {String || Array} values[0] || values
+ */
+    Cleanup.prototype.remData = function remData(name) {
+        if (name && isString(name)) {
+            name = name.slice(0,4) !== 'data' ? undoCamelCase('data-' + name) : undoCamelCase(name);
+            each(this, function (node) {
+                node.removeAttribute(name);
+            });
+        } else if (isArray(name)) {
+            name.forEach(function (key) {
+                this.remData(key);
+            }, this);
+        }
+        return this;
+    };
+
+/**
  * attr
  * Set or get one or more attributes.
  * @param {String || Object} name
@@ -860,16 +914,12 @@
             name = toCamelCase(name);
             if (isString(value) || isNumber(value) || isBoolean(value)) {
                 each(this, function (node) {
-                    if (isObject(node)) {
-                        node[name] = value;
-                    }
+                    node[name] = value;
                 });
             } else {
                 values = [];
                 each(this, function (node) {
-                    if (isObject(node)) {
-                        values.push(node[name]);
-                    }
+                    values.push(node[name]);
                 });
                 return values.length === 1 ? values[0] : values;
             }
@@ -897,10 +947,7 @@
         if (name && isString(name)) {
             name = toCamelCase(name);
             each(this, function (node) {
-                if (isObject(node)) {
-                    node[name] = null;
-                    delete node[name];
-                }
+                node.removeAttribute(name);
             });
         } else if (isArray(name)) {
             name.forEach(function (key) {
@@ -924,16 +971,12 @@
             name = toCamelCase(name);
             if (isString(value) || isNumber(value) || isBoolean(value)) {
                 each(this, function (node) {
-                    if (isObject(node) && node.style) {
-                        node.style[name] = value;
-                    }
+                    node.style[name] = value;
                 });
             } else {
                 values = [];
                 each(this, function (node) {
-                    if (isObject(node) && node.style) {
-                        values.push(node.style[name]);
-                    }
+                    values.push(node.style[name]);
                 });
                 return values.length === 1 ? values[0] : values;
             }
@@ -962,10 +1005,7 @@
         if (name && isString(name)) {
             name = toCamelCase(name);
             each(this, function (node) {
-                if (isObject(node) && node.style) {
-                    node.style[name] = null;
-                    delete node.style[name];
-                }
+                node.style.removeProperty(name);
             });
         } else if (isArray(name)) {
             name.forEach(function (key) {
@@ -987,15 +1027,11 @@
 
         if (isString(str) || isNumber(str)) {
             each(this, function (node) {
-                if (isObject(node)) {
-                    node.textContent = str;
-                }
+                node.textContent = str;
             });
         } else {
             each(this, function (node) {
-                if (isObject(node)) {
-                    values.push(node.textContent);
-                }
+                values.push(node.textContent);
             });
             return values.length === 1 ? values[0] : values;
         }
@@ -1009,9 +1045,7 @@
  */
     Cleanup.prototype.remText = function remText() {
         each(this, function (node) {
-            if (isObject(node)) {
-                node.textContent = '';
-            }
+            node.textContent = '';
         });
         return this;
     };
@@ -1027,15 +1061,11 @@
 
         if (isString(str) || isNumber(str)) {
             each(this, function (node) {
-                if (isObject(node)) {
-                    node.innerHTML = str;
-                }
+                node.innerHTML = str;
             });
         } else if (isUndefined(str)) {
             each(this, function (node) {
-                if (isObject(node)) {
-                    values.push(node.innerHTML);
-                }
+                values.push(node.innerHTML);
             });
             return values.length === 1 ? values[0] : values;
         }
@@ -1049,9 +1079,7 @@
  */
     Cleanup.prototype.remHtml = function remHtml() {
         each(this, function (node) {
-            if (isObject(node)) {
-                node.innerHTML = '';
-            }
+            node.innerHTML = '';
         });
         return this;
     };
@@ -1071,13 +1099,10 @@
             each(this, function (node) {
                 var test;
 
-                if (isObject(node)) {
-                    if (!isString(node.className)) {
-                        node.className = '';
-                    }
-                    rgx.test();
-                    values.push(rgx.test(node.className));
+                if (!isString(node.className)) {
+                    node.className = '';
                 }
+                values.push(rgx.test(node.className));
             });
         }
         return values.length === 1 ? values[0] : values;
@@ -1092,9 +1117,7 @@
     Cleanup.prototype.setClasses = function setClasses(classes) {
         if (isString(classes)) {
             each(this, function (node) {
-                if (isObject(node)) {
-                    node.className = classes.trim();
-                }
+                node.className = classes.trim();
             });
         }
         return this;
@@ -1109,9 +1132,7 @@
         var values = [];
 
         each(this, function (node) {
-            if (isObject(node)) {
-                values.push(node.className || '');
-            }
+            values.push(node.className || '');
         });
         return values.length === 1 ? values[0] : values;
     };
@@ -1126,19 +1147,17 @@
         if (classes && isString(classes)) {
             classes = classes.split(' ');
             each(this, function (node) {
-                if (isObject(node)) {
-                    if (!isString(node.className)) {
-                        node.className = '';
-                    }
-                    classes.forEach(function (cls) {
-                        var rgx = new RegExp('(^|[^-\w])(' + cls + ')([^-\w]|$)', 'g');
-
-                        if (!rgx.test(node.className)) {
-                            node.className += ' ' + cls;
-                        }
-                    });
-                    node.className = node.className.trim();
+                if (!isString(node.className)) {
+                    node.className = '';
                 }
+                classes.forEach(function (cls) {
+                    var rgx = new RegExp('(^|[^-\w])(' + cls + ')([^-\w]|$)', 'g');
+
+                    if (!rgx.test(node.className)) {
+                        node.className += ' ' + cls;
+                    }
+                });
+                node.className = node.className.trim();
             });
         }
         return this;
@@ -1154,16 +1173,14 @@
         if (classes && isString(classes)) {
             classes = classes.split(' ');
             each(this, function (node) {
-                if (isObject(node)) {
-                    if (!isString(node.className)) {
-                        node.className = '';
-                    }
-                    classes.forEach(function (cls) {
-                        var rgx = new RegExp('(^|[^-\w])(' + cls + ')([^-\w]|$)', 'g');
-
-                        node.className = node.className.replace(rgx, '').trim();
-                    });
+                if (!isString(node.className)) {
+                    node.className = '';
                 }
+                classes.forEach(function (cls) {
+                    var rgx = new RegExp('(^|[^-\w])(' + cls + ')([^-\w]|$)', 'g');
+
+                    node.className = node.className.replace(rgx, '').trim();
+                });
             });
         }
         return this;
@@ -1186,29 +1203,25 @@
                 rgxtwo = new RegExp('(^|[^-\w])(' + classtwo + ')([^-\w]|$)', 'g');
             }
             each(this, function (node) {
-                if (isObject(node)) {
-                    if (!isString(node.className)) {
-                        node.className = '';
-                    }
-                    if (rgxtwo) {
-                        if (rgxone.test(node.className) && !rgxtwo.test(node.className)) {
-                            node.className = node.className.replace(rgxone, '').trim();
-                            node.className += ' ' + classtwo;
-                        } else if (!rgxone.test(node.className) && rgxtwo.test(node.className)) {
-                            node.className = node.className.replace(rgxtwo, '').trim();
-                            node.className += ' ' + classone;
-                        } else if (rgxone.test(node.className) && rgxtwo.test(node.className)) {
-                            node.className = node.className.replace(rgxtwo, '').trim();
-                        } else {
-                            node.className += ' ' + classone;
-                        }
+                if (!isString(node.className)) {
+                    node.className = '';
+                }
+                if (rgxtwo) {
+                    if (rgxone.test(node.className) && !rgxtwo.test(node.className)) {
+                        node.className = node.className.replace(rgxone, '').trim();
+                        node.className += ' ' + classtwo;
+                    } else if (!rgxone.test(node.className) && rgxtwo.test(node.className)) {
+                        node.className = node.className.replace(rgxtwo, '').trim();
+                        node.className += ' ' + classone;
+                    } else if (rgxone.test(node.className) && rgxtwo.test(node.className)) {
+                        node.className = node.className.replace(rgxtwo, '').trim();
                     } else {
-                        if (rgxone.test(node.className)) {
-                            node.className = node.className.replace(rgxone, '').trim();
-                        } else {
-                            node.className += ' ' + classone;
-                        }
+                        node.className += ' ' + classone;
                     }
+                } else if (rgxone.test(node.className)) {
+                    node.className = node.className.replace(rgxone, '').trim();
+                } else {
+                    node.className += ' ' + classone;
                 }
             });
         }
@@ -1267,7 +1280,7 @@
     Cleanup.prototype.remEl = function remEl(child) {
         if (isNode(child)) {
             each(this, function (node) {
-                if (isNode(node) && node.contains(child)) {
+                if (node.contains(child)) {
                     node.removeChild(child);
                 }
             });
