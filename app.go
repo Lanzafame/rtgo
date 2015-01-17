@@ -51,13 +51,13 @@ type App struct {
 
 // ReadCookieHandler reads a secure cookie with the name specified by cookname.
 // It returns the cookie value.
-func (a *App) ReadCookieHandler(w http.ResponseWriter, r *http.Request) map[string]string {
-	cookie, err := r.Cookie(a.Cookiename)
+func (a *App) ReadCookieHandler(w http.ResponseWriter, r *http.Request, cookname string) map[string]string {
+	cookie, err := r.Cookie(cookname)
 	if err != nil {
 		return nil
 	}
 	cookvalue := make(map[string]string)
-	if err := a.Scook.Decode(a.Cookiename, cookie.Value, &cookvalue); err != nil {
+	if err := a.Scook.Decode(cookname, cookie.Value, &cookvalue); err != nil {
 		return nil
 	}
 	return cookvalue
@@ -183,12 +183,14 @@ func (a *App) SocketHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", 405)
 		return
 	}
-	c := a.NewConnection(w, r)
-	if c != nil {
-		go c.WritePump()
-		c.Join("root")
-		c.ReadPump()
+	c, err := a.NewConnection(w, r)
+	if err != nil {
+		log.Println(err)
+		return
 	}
+	go c.WritePump()
+	c.Join("root")
+	c.ReadPump()
 }
 
 // FindRoute loops through all routes attempting to match path.
@@ -229,12 +231,11 @@ func (a *App) FindRoute(path string) map[string]string {
 // NewConnection upgrades an icoming HTTP request, creates a new WebSocket
 // connection, and adds it to ConnManager.
 // It returns the new connection.
-func (a *App) NewConnection(w http.ResponseWriter, r *http.Request) *Conn {
-	cookie := a.ReadCookieHandler(w, r)
+func (a *App) NewConnection(w http.ResponseWriter, r *http.Request) (*Conn, error) {
+	cookie := a.ReadCookieHandler(w, r, a.Cookiename)
 	socket, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println(err)
-		return nil
+		return nil, err
 	}
 	c := &Conn{
 		app:       a,
@@ -245,7 +246,7 @@ func (a *App) NewConnection(w http.ResponseWriter, r *http.Request) *Conn {
 		privilege: cookie["privilege"],
 	}
 	a.ConnManager[c.id] = c
-	return c
+	return c, nil
 }
 
 // NewRoom will create a new room with the specified name,
@@ -349,4 +350,3 @@ func NewApp() *App {
 	app.Parse("./config.json")
 	return app
 }
-
