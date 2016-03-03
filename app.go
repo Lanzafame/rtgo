@@ -17,15 +17,11 @@
 package rtgo
 
 import (
-	"code.google.com/p/go-uuid/uuid"
 	"crypto/rand"
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"github.com/chuckpreslar/emission"
-	"github.com/gorilla/securecookie"
-	"github.com/tpjg/goriakpbc"
 	"html/template"
 	"io/ioutil"
 	"log"
@@ -33,6 +29,11 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/chuckpreslar/emission"
+	"github.com/gorilla/securecookie"
+	"github.com/pborman/uuid"
+	"github.com/tpjg/goriakpbc"
 )
 
 type App struct {
